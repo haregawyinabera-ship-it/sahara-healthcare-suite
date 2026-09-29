@@ -7,3 +7,6 @@ requests
 gradio>=5.1.0
 huggingface_hub<0.26.0
 python-dotenv
+sqlalchemy[asyncio]>=2.0.28,<3
+aiosqlite>=0.20,<1
+asyncpg>=0.29,<1
