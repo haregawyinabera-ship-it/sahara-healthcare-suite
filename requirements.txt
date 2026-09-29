@@ -5,6 +5,7 @@ httpx>=0.24.0
 python-multipart
 requests
 gradio>=5.1.0
+spaces==0.51.3
 huggingface_hub<0.26.0
 python-dotenv
 sqlalchemy[asyncio]>=2.0.28,<3
