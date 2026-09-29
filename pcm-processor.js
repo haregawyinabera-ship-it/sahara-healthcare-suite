@@ -17,9 +17,10 @@ class PCMProcessor extends AudioWorkletProcessor {
       Math.min(0.48, Math.max(0.2, 15000 / sourceSampleRate))
     );
 
-    this.bufferSize = 4096;
+    this.bufferSize = 1600;
     this.buffer = new Float32Array(this.bufferSize);
     this.bufferIndex = 0;
+    this.bufferTimestamp = null;
     this.isPaused = false;
 
     this.ringBufferSize = 80000;
@@ -110,7 +111,7 @@ class PCMProcessor extends AudioWorkletProcessor {
       samples: samples.slice()
     });
 
-    while (this.packetQueue.length > 100) {
+    while (this.packetQueue.length > 50) {
       this.packetQueue.shift();
     }
   }
@@ -143,10 +144,9 @@ class PCMProcessor extends AudioWorkletProcessor {
     if (input && input.length > 0) {
       const channelData = input[0];
       const downsampled = this.downsampleTo16k(channelData);
-      const packetTimestamp = Date.now();
-      this.pushToRingBuffer(downsampled, packetTimestamp);
 
       for (let i = 0; i < downsampled.length; i++) {
+        if (this.bufferIndex === 0) this.bufferTimestamp = Date.now();
         this.buffer[this.bufferIndex++] = downsampled[i];
 
         if (this.bufferIndex >= this.bufferSize) {
@@ -166,7 +166,7 @@ class PCMProcessor extends AudioWorkletProcessor {
       pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
     }
 
-    const packetTimestamp = Date.now();
+    const packetTimestamp = this.bufferTimestamp || Date.now();
     const packetSamples = new Float32Array(this.bufferIndex);
     for (let i = 0; i < this.bufferIndex; i++) {
       packetSamples[i] = this.buffer[i];
@@ -186,6 +186,7 @@ class PCMProcessor extends AudioWorkletProcessor {
 
     this.buffer = new Float32Array(this.bufferSize);
     this.bufferIndex = 0;
+    this.bufferTimestamp = null;
   }
 }
 

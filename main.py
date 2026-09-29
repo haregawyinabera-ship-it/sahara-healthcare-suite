@@ -907,6 +907,7 @@ load_dotenv()
 
 from config import get_intron_api_key
 from edge_persistence import persistence
+from src.agents.clinical_agent import ClinicalAgent
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
@@ -931,6 +932,7 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMITED_PATH_PREFIXES = (
     "/api/v1/transcribe",
+    "/api/v1/agent/process",
     "/api/intron/stt/upload-sync",
     "/api/intron/tts/",
     "/api/intron/voicebot/",
@@ -1131,6 +1133,13 @@ class ClinicalSOAPSchema(BaseModel):
 class ClinicalProcessRequest(BaseModel):
     transcript: str = Field(..., min_length=1, description="Raw code-switched clinical transcript text")
     language_hint: Optional[str] = Field("auto", description="Primary language pair hint")
+
+
+class ClinicalAgentRequest(BaseModel):
+    transcript: str = Field(..., min_length=1, max_length=12000)
+    language_hint: Optional[str] = Field("auto", max_length=32)
+    voice_gender: str = Field(default=INTRON_TTS_VOICE_GENDER, max_length=32)
+    include_readback: bool = True
 
 
 class ClinicalProcessResponse(BaseModel):
@@ -1349,6 +1358,54 @@ async def process_clinical_text(payload: ClinicalProcessRequest) -> ClinicalProc
         discrepancies=discrepancies,
         sign_off_required=bool(discrepancies) or soap.requires_manual_review or soap.requires_manual_entry,
     )
+
+
+clinical_agent = ClinicalAgent()
+CLINICAL_AGENT_SAFETY_DISCLAIMER = (
+    "Draft generated from an Intron Sahara v2.5 transcript by the local clinical processor. It is not a diagnosis "
+    "or treatment order and requires verification and sign-off by a licensed clinician."
+)
+
+
+@app.post("/api/v1/agent/process")
+async def process_clinical_agent(payload: ClinicalAgentRequest) -> dict[str, Any]:
+    """Run the clinician-reviewed SOAP, ICD-10 candidate, and TTS tool workflow."""
+    if not payload.transcript.strip():
+        raise HTTPException(status_code=422, detail="transcript must be a non-empty string")
+    scrubbed_transcript, redactions_count = _scrub_transcript(payload.transcript)
+    result = await clinical_agent.run(
+        scrubbed_transcript,
+        voice_gender=payload.voice_gender,
+        include_readback=payload.include_readback,
+    )
+    soap = _coerce_soap_payload(result["soap"])
+    discrepancies = validate_transcript_soap_discrepancy(scrubbed_transcript, soap)
+    result.update({
+        "soap": soap.model_dump(),
+        "scrubbed_transcript": scrubbed_transcript,
+        "redactions_count": redactions_count,
+        "discrepancies": discrepancies,
+        "requires_manual_review": True,
+        "sign_off_required": True,
+        "clinical_safety_disclaimer": CLINICAL_AGENT_SAFETY_DISCLAIMER,
+    })
+    return result
+
+
+@app.get("/api/v1/health/intron")
+async def intron_model_health() -> dict[str, Any]:
+    started = time.perf_counter()
+    credentials_configured = bool(INTRON_API_KEY.strip())
+    return {
+        "provider": "Intron Sahara v2.5 STT/TTS",
+        "model_status": "configured" if credentials_configured else "fallback",
+        "credentials_configured": credentials_configured,
+        "clinical_nlp": "local_clinical_processor",
+        "language_codes": ["am-ET", "en-US"],
+        "streaming_audio": {"sample_rate_hz": 16000, "channels": 1, "bit_depth": 16},
+        "server_response_time_ms": round((time.perf_counter() - started) * 1000, 3),
+        "provider_reachable": None,
+    }
 
 
 def _build_fhir_bundle(payload: FHIRExportRequest) -> dict:
@@ -2057,12 +2114,15 @@ async def websocket_stream(websocket: WebSocket):
             intron_url,
             additional_headers={"Authorization": _intron_auth_header()},
             open_timeout=20,
+            ping_interval=10,
+            ping_timeout=10,
         ) as intron_ws:
             session_finished = asyncio.Event()
             acknowledged_timestamps: dict[int, float] = {}
             audio_buffer = bytearray()
             audio_buffer_timestamp: float | None = None
             pending_audio_timestamp: float | None = None
+            latest_audio_timestamp_ms: float | None = None
             upstream_chunk_id = 0
             last_audio_at = started_at
 
@@ -2078,7 +2138,7 @@ async def websocket_stream(websocket: WebSocket):
                 }))
 
             async def forward_browser_to_intron():
-                nonlocal last_audio_at, audio_buffer_timestamp, pending_audio_timestamp
+                nonlocal last_audio_at, audio_buffer_timestamp, pending_audio_timestamp, latest_audio_timestamp_ms
                 try:
                     while True:
                         now = time.monotonic()
@@ -2125,6 +2185,7 @@ async def websocket_stream(websocket: WebSocket):
                                     timestamp_ms = msg.get("timestamp_ms")
                                     if isinstance(timestamp_ms, (int, float)) and not isinstance(timestamp_ms, bool):
                                         pending_audio_timestamp = timestamp_ms
+                                        latest_audio_timestamp_ms = timestamp_ms
                                 elif msg.get("event") == "stop":
                                     chunk = _take_stt_audio_chunk(audio_buffer, final=True)
                                     if chunk is not None:
@@ -2178,10 +2239,20 @@ async def websocket_stream(websocket: WebSocket):
                         elif msg_type == "PARTIAL_TRANSCRIPT":
                             transcript = payload.get("transcript", "")
                             if transcript:
-                                await websocket.send_json({"transcript": transcript, "session_id": session_id})
+                                await websocket.send_json({
+                                    "transcript": transcript,
+                                    "session_id": session_id,
+                                    "audio_timestamp_ms": latest_audio_timestamp_ms,
+                                    "server_time_ms": time.time() * 1000,
+                                })
                         elif msg_type == "COMMITTED_TRANSCRIPT":
                             transcript = payload.get("transcript_text", "")
-                            await websocket.send_json({"transcript": transcript, "session_id": session_id})
+                            await websocket.send_json({
+                                "transcript": transcript,
+                                "session_id": session_id,
+                                "audio_timestamp_ms": latest_audio_timestamp_ms,
+                                "server_time_ms": time.time() * 1000,
+                            })
                             session_finished.set()
                             return
                         elif msg_type in STT_STREAM_TERMINAL_MESSAGES:

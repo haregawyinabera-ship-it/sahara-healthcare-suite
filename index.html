@@ -46,6 +46,13 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <span id="stt-provider-badge" class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-[10px] font-mono text-slate-400" title="Speech-to-text provider state">
+          <span id="stt-provider-dot" class="h-1.5 w-1.5 rounded-full bg-slate-500"></span> STT: Intron Sahara v2.5 Active
+        </span>
+        <span id="soap-provider-badge" class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-[10px] font-mono text-slate-400" title="Clinical SOAP provider state">
+          <i class="fa-solid fa-notes-medical"></i><span id="soap-provider-label">SOAP Model: Local Clinical Processor</span>
+        </span>
+        <span id="stream-latency-badge" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-[10px] font-mono text-slate-500" aria-live="polite" title="Measured time from audio frame capture to transcript arrival">Frame to transcript: -- ms</span>
         <button id="voice-toggle-btn" onclick="toggleVoiceOutput()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2">
           <i id="voice-toggle-icon" class="fa-solid fa-volume-high"></i> <span id="voice-toggle-label">AI Voice: On</span>
         </button>
@@ -237,7 +244,7 @@
                 <label for="intron-upload-language" class="text-[11px] text-slate-400">Recording language</label>
                 <select id="intron-upload-language" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200">
                   <option value="am">Amharic-English code-switch</option>
-                  <option value="om">Oromo-English code-switch</option>
+                  <option value="om" disabled>Afaan Oromoo-English (not validated)</option>
                 </select>
                 <button id="save-upload-recording" onclick="uploadSavedRecording()" disabled class="h-9 px-3 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold">
                   <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Save and upload recording to Intron
@@ -415,6 +422,14 @@
               <label for="soap-transcript" class="text-[10px] font-bold uppercase tracking-wider text-teal-300">Live Code-Switched Transcript Stream:</label>
               <textarea id="soap-transcript" rows="4" class="mt-1 w-full resize-y rounded-lg border border-slate-800 bg-[#080d19] p-3 text-xs font-mono leading-relaxed text-slate-200 focus:border-teal-500 focus:outline-none" placeholder="Live Amharic-English transcript will appear here..."></textarea>
             </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <button id="generate-clinical-agent" type="button" onclick="generateClinicalAgentDraft()" class="rounded-md bg-teal-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate SOAP draft
+              </button>
+              <span id="clinical-agent-status" class="text-xs text-slate-400" aria-live="polite"></span>
+              <audio id="clinical-agent-readback" class="hidden h-8 max-w-full" controls></audio>
+            </div>
+            <p class="text-[10px] text-amber-300">Email addresses and Ethiopian phone-number patterns are masked before configured Gemini processing; this is not complete de-identification. Use only approved, de-identified transcripts.</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label for="soap-subjective" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">S - Subjective (Symptoms):</label>
@@ -779,7 +794,7 @@
       <div class="p-6 overflow-y-auto space-y-6 text-xs sm:text-sm text-slate-300 leading-relaxed">
         <div class="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl text-emerald-300 space-y-2">
           <h4 class="font-bold text-base text-white"><i class="fa-solid fa-compass text-emerald-400"></i> Purpose and product direction</h4>
-          <p><strong>AfriHealth AI</strong> is a clinician-reviewed voice documentation and decision-support workflow for community health teams working across English, Amharic-English, and Afaan Oromoo-English conversations.</p>
+          <p><strong>AfriHealth AI</strong> is a clinician-reviewed voice documentation and decision-support workflow for community health teams working with English-Amharic code-switched conversations. Afaan Oromoo support is not validated.</p>
         </div>
         <div class="space-y-4">
           <h4 class="font-bold text-white text-sm uppercase tracking-wider text-emerald-400 border-b border-slate-800 pb-1">1. Product modules</h4>
@@ -996,6 +1011,45 @@
     return fetch(input, { ...options, credentials: 'include' });
   }
 
+  function setProviderBadge(id, state, label) {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    const active = state === 'active';
+    const configured = state === 'configured';
+    badge.className = `inline-flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[10px] font-mono ${
+      active || configured
+        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+        : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+    }`;
+    const dot = document.getElementById(id === 'stt-provider-badge' ? 'stt-provider-dot' : null);
+    if (dot) dot.className = `h-1.5 w-1.5 rounded-full ${active || configured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`;
+    if (id === 'soap-provider-badge') {
+      const labelElement = document.getElementById('soap-provider-label');
+      if (labelElement) labelElement.textContent = label;
+    } else if (label) {
+      badge.lastChild.textContent = ` ${label}`;
+    }
+  }
+
+  async function refreshProviderStatus() {
+    try {
+      const response = await fetchApi(`${getApiOrigin()}/api/v1/health/intron`);
+      if (!response.ok) throw new Error(`Provider status unavailable (${response.status})`);
+      const health = await response.json();
+      setProviderBadge('stt-provider-badge', health.credentials_configured ? 'configured' : 'fallback', 'Intron Sahara v2.5');
+      setProviderBadge(
+        'soap-provider-badge',
+        health.model_status === 'configured' ? 'configured' : 'fallback',
+        health.model_status === 'configured' ? 'SOAP Model: Local Clinical Processor' : 'SOAP Model: Local fallback'
+      );
+    } catch (error) {
+      setProviderBadge('stt-provider-badge', 'fallback', 'Intron unavailable');
+      setProviderBadge('soap-provider-badge', 'fallback', 'SOAP Model: Local fallback');
+    }
+  }
+
+  window.addEventListener('load', refreshProviderStatus, { once: true });
+
   function scheduleWebSocketReconnect() {
     if (websocketReconnectTimer || (!isRecordingTriage && !ehrRecording)) return;
 
@@ -1034,6 +1088,7 @@
       websocket = new WebSocket(`${protocol}//${apiUrl.host}/ws/stream?${streamQuery.toString()}`);
       websocket.onopen = () => {
         console.log('WebSocket connected');
+        setProviderBadge('stt-provider-badge', 'active', 'STT: Intron Sahara v2.5 Active');
         if (lastAckTs > 0) {
           websocket.send(JSON.stringify({ type: 'resume', ack_ts: lastAckTs }));
         }
@@ -1078,6 +1133,13 @@
             if (lastPartialTranscriptAt !== null) {
               partialTokenDelayMs = now - lastPartialTranscriptAt;
             }
+            if (Number.isFinite(payload.audio_timestamp_ms)) {
+              frameTranscriptLatencyMs = Math.max(0, Date.now() - payload.audio_timestamp_ms);
+              window.__streamingMetrics.frame_to_transcript_latency_ms = frameTranscriptLatencyMs;
+            }
+            if (Number.isFinite(payload.server_time_ms)) {
+              window.__streamingMetrics.last_server_transcript_at_ms = payload.server_time_ms;
+            }
             lastPartialTranscriptAt = now;
             const transcript = document.getElementById('triage-transcript');
             if (transcript) renderGuardedTranscript(payload.transcript, 'triage-transcript');
@@ -1099,6 +1161,7 @@
       };
       websocket.onclose = () => {
         console.log('WebSocket closed');
+        setProviderBadge('stt-provider-badge', 'fallback', 'STT: Intron disconnected');
         const status = document.getElementById('mic-status');
         if (status && (isRecordingTriage || ehrRecording)) {
           status.dataset.baseStatus = 'Speech service disconnected. Reconnecting with resilient packet replay...';
@@ -1287,12 +1350,20 @@
   let lastPartialTranscriptAt = null;
   let firstPartialLatencyMs = null;
   let partialTokenDelayMs = null;
-  window.__streamingMetrics = { first_partial_latency_ms: null, partial_token_delay_ms: null, first_audio_sent_at: null };
+  let frameTranscriptLatencyMs = null;
+  window.__streamingMetrics = { first_partial_latency_ms: null, partial_token_delay_ms: null, first_audio_sent_at: null, frame_to_transcript_latency_ms: null, last_server_transcript_at_ms: null };
 
   function updateStreamingLatencyUI() {
     const statusEl = document.getElementById('mic-status');
+    const latencyBadge = document.getElementById('stream-latency-badge');
     window.__streamingMetrics.first_partial_latency_ms = Number.isFinite(firstPartialLatencyMs) ? firstPartialLatencyMs : null;
     window.__streamingMetrics.partial_token_delay_ms = Number.isFinite(partialTokenDelayMs) ? partialTokenDelayMs : null;
+    const displayedLatency = Number.isFinite(frameTranscriptLatencyMs) ? frameTranscriptLatencyMs : firstPartialLatencyMs;
+    if (latencyBadge && Number.isFinite(displayedLatency)) {
+      const withinTarget = displayedLatency < 200;
+      latencyBadge.textContent = `Frame to transcript: ${displayedLatency.toFixed(0)} ms`;
+      latencyBadge.className = `rounded-md border px-2 py-1.5 text-[10px] font-mono ${withinTarget ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'}`;
+    }
     if (!statusEl) return;
     const parts = [];
     if (Number.isFinite(firstPartialLatencyMs)) parts.push(`First partial ${firstPartialLatencyMs.toFixed(0)}ms`);
@@ -1962,6 +2033,68 @@
       const transcript = typeof payload === 'string' ? payload : payload?.transcript;
       if (!transcript) return;
       updateSoapState({ transcript }, { fromStream: true });
+    }
+
+    async function generateClinicalAgentDraft() {
+      const transcript = (document.getElementById('soap-transcript')?.value || soapState.transcript).trim();
+      const button = document.getElementById('generate-clinical-agent');
+      const status = document.getElementById('clinical-agent-status');
+      const audio = document.getElementById('clinical-agent-readback');
+      if (!transcript) {
+        if (status) status.textContent = 'Add or record a transcript first.';
+        return;
+      }
+      if (soapRecordVerified) {
+        if (status) status.textContent = 'Undo sign-off before generating a new draft.';
+        return;
+      }
+
+      if (button) button.disabled = true;
+      if (status) status.textContent = 'Generating clinician-review draft...';
+      if (audio) {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.classList.add('hidden');
+      }
+      try {
+        const response = await fetchApi(`${getApiOrigin()}/api/v1/agent/process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript, include_readback: true })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.detail || `Generation failed (${response.status})`);
+
+        updateSoapState({
+          transcript: result.scrubbed_transcript || transcript,
+          ...result.soap
+        });
+        const codes = (result.icd10_suggestions || []).map(item => `${item.code} - ${item.description}`);
+        if (codes.length) {
+          updateSoapState({ assessment: `${result.soap.assessment || ''}\nICD-10 candidates for clinician review: ${codes.join('; ')}`.trim() });
+        }
+        if (audio && result.readback_audio_url) {
+          audio.src = result.readback_audio_url;
+          audio.classList.remove('hidden');
+        }
+        const providerActive = result.provider_status === 'active' || result.provider_status === 'local';
+        setProviderBadge(
+          'soap-provider-badge',
+          providerActive ? 'active' : 'fallback',
+          providerActive ? 'SOAP Model: Local Clinical Processor' : 'SOAP Model: Local fallback'
+        );
+        const reviewNotice = result.provider_status === 'fallback'
+          ? `Local fallback shown. ${result.provider_error || 'Provider generation unavailable.'}`
+          : 'Draft generated.';
+        if (status) status.textContent = `${reviewNotice} ${result.redactions_count || 0} identifier pattern(s) masked. Clinician sign-off required.`;
+        setSoapVerificationState(false);
+        window.clinicalSignOffVerified = false;
+      } catch (error) {
+        console.error('Clinical agent request failed:', error);
+        if (status) status.textContent = `Could not generate draft: ${error.message}`;
+      } finally {
+        if (button) button.disabled = false;
+      }
     }
 
     function populateSoapFromClinicalFields(transcriptText) {

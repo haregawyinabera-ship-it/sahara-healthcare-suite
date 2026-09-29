@@ -354,10 +354,14 @@ class SafetyTests(unittest.TestCase):
             )
             self.assertEqual(intron.sent[-1], {"message_type": "COMMIT"})
             self.assertIn({"ack_ts": 1100}, browser.outgoing)
-            self.assertIn(
-                {"transcript": "test transcript", "session_id": "local-session"},
-                browser.outgoing,
-            )
+            transcript_messages = [
+                message for message in browser.outgoing
+                if message.get("transcript") == "test transcript"
+            ]
+            self.assertEqual(len(transcript_messages), 1)
+            self.assertEqual(transcript_messages[0]["session_id"], "local-session")
+            self.assertEqual(transcript_messages[0]["audio_timestamp_ms"], 1100)
+            self.assertIsInstance(transcript_messages[0]["server_time_ms"], float)
             record_transcript.assert_not_awaited()
             end_session.assert_awaited_once_with("local-session")
 
