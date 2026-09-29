@@ -21,7 +21,7 @@ with gr.Blocks(title="Sahara Healthcare Suite API") as space_ui:
 
 # Keep the FastAPI backend mounted under the Gradio Space entrypoint, while
 # explicitly starting the web server so the process stays alive.
-app = gr.mount_gradio_app(fastapi_app, space_ui, path="/")
+app = gr.mount_gradio_app(fastapi_app, space_ui, path="/", ssr_mode=False)
 
 
 if __name__ == "__main__":
