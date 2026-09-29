@@ -1,13 +1,16 @@
-import gradio as gr
+import os
+
+import uvicorn
 
 from main import app as fastapi_app
 
+app = fastapi_app
 
-with gr.Blocks(title="Sahara Healthcare Suite API") as space_ui:
-    gr.Markdown("# Sahara Healthcare Suite")
-    gr.Markdown(
-        "FastAPI clinical services are available at the API routes. "
-        "Open the [API documentation](/docs) or [health check](/health)."
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "7860")),
+        log_level="info",
     )
-
-app = gr.mount_gradio_app(fastapi_app, space_ui, path="/")
