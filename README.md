@@ -1,10 +1,12 @@
 ---
 title: Sahara Healthcare Suite API
-emoji: 🩺
+emoji: 🏥
 colorFrom: green
 colorTo: blue
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 5.1.0
+app_file: app.py
+pinned: false
 license: mit
 ---
 
@@ -69,6 +71,7 @@ The system is built around a static frontend and a secure FastAPI gateway that k
 The repository separates fixture demonstrations from measured validation:
 
 - The Module 4 fixture matrix uses embedded hypotheses and is not an audio benchmark or production model ranking.
+- `benchmark_report.json`, `evaluation_report_summary.json`, and `BENCHMARK_RESULTS.md` are generated together by `python benchmark_suite.py` from the 15-case manifest. They score cached transcript hypotheses for Intron Sahara v2.5, Whisper Tiny, English-only Wav2Vec2 Base, and Gemini; this command does not run ASR inference. The latest inference metadata is marked partial, the audio files are not present in this checkout, and the annotator-count field is blank. Do not describe the report as independently reproducible audio inference.
 - The live benchmark accepts one reviewed Amharic-English sample and reports Intron Sahara v2.5 latency, transcript, WER, and CER.
 - WER/CER require a verified reference transcript. A provisional Intron-reference mode is available for model-to-model comparison, but it is not independent gold-standard accuracy.
 - The clinical validation report covers 15 reviewed simulated cases and reports a 56.38% mean WER, 44.33% target-term recall, and six cases with critical-term misses. These results require clinician review and do not support autonomous care.
@@ -92,6 +95,14 @@ Typical flow:
 5. Module 2 exposes an editable SOAP draft and requires clinician sign-off before FHIR export or EHR commit.
 6. Module 4 can send a reviewed sample to `/api/v1/benchmark/live` for Intron-focused scoring.
 
+The clinical agent route, `POST /api/v1/agent/process`, sends a transcript
+through configured Gemini text generation, local symptom-based ICD-10
+candidate lookup, and optional Intron TTS readback. It masks common email and
+Ethiopian phone-number patterns before Gemini processing, but this is not
+comprehensive de-identification. Missing Gemini configuration or invalid model
+output produces a manual-review fallback. All SOAP and coding outputs remain
+drafts; clinician verification and sign-off are required.
+
 ---
 
 ## Tech stack
@@ -110,6 +121,7 @@ Typical flow:
 ```text
 .
 ├── main.py                  # FastAPI application and API routes
+├── src/agents/              # Clinician-reviewed clinical tool orchestration
 ├── index.html               # Browser frontend entry point
 ├── server.js                # Optional local static server behavior
 ├── package.json             # Frontend run script
@@ -215,6 +227,7 @@ This uses the static server configuration defined in `package.json` and serves t
 - Never expose `INTRON_API_KEY` in the browser or source code.
 - Live partial and final transcripts are persisted in PostgreSQL/SQLite. The repository does not currently implement transcript expiry or deletion; do not use identifiable patient data until approved retention and access controls are in place.
 - The clinical text endpoint redacts common email addresses and Ethiopian-format phone numbers, but this is not comprehensive de-identification and is not applied to live-stream persistence.
+- `/api/v1/agent/process` sends the pattern-redacted transcript to configured Gemini and may send generated SOAP text to Intron TTS. These providers process data outside this application; use only approved, de-identified transcripts. The backend does not verify consent.
 - The backend has an optional trusted-proxy identity-header check, not built-in clinician accounts or role-based access control.
 - Use HTTPS and WSS in production.
 - Configure CORS restrictions carefully for deployment.
