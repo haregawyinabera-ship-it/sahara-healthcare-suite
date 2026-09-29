@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.venv
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.sqlite3
+tests/
+clinical_validation/
+benchmark_data/samples/
+*.m4a
+*.wav

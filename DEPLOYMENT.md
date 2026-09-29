@@ -1,5 +1,45 @@
 # AfriHealth AI deployment and operations
 
+## Deploy the FastAPI backend to Hugging Face Spaces
+
+This repository includes a Docker Space configuration (`Dockerfile` and the
+Docker SDK metadata at the top of `README.md`). Create a Docker Space in your
+Hugging Face account, then push or sync this repository to that Space. The
+container listens on port `7860`; the static browser frontend remains on
+Cloudflare Pages.
+
+Add runtime secrets/variables in the Space settings, not in the repository:
+
+```text
+INTRON_API_KEY=your-rotated-intron-key
+ALLOWED_ORIGINS=https://sahara-healthcare-suite.pages.dev
+DATABASE_URL=postgresql://...
+```
+
+The Space container filesystem is ephemeral. Use an external PostgreSQL
+database for production persistence, or configure an HF Storage Bucket mounted
+at `/data` and set `DATABASE_URL=sqlite+aiosqlite:////data/edge_sync.sqlite3`
+for non-production testing. Never rely on the container's default SQLite file
+for durable production records.
+
+After the Space is running, copy its public URL (for example,
+`https://<owner>-<space-name>.hf.space`) and set it as
+`window.SAHARA_API_ORIGIN` in `index.html`, replacing the current Railway
+`productionApiOrigin` value. Because Cloudflare Pages serves this as a static
+site, commit and redeploy the updated HTML after changing the Space URL. The
+browser needs this API origin for REST and WebSocket requests. Confirm the
+Space's CORS `ALLOWED_ORIGINS` exactly matches the Cloudflare Pages origin.
+
+Verify `/health`, `/openapi.json`, `/api/v1/health/intron`, and
+`/api/v1/agent/process` on the Space URL. Also test `/ws/stream` through the
+Space URL, since audio transcription depends on WebSockets.
+
+Do not handle real patient data on a public Space without an approved access
+control layer, durable encrypted storage, and an appropriate privacy/compliance
+review. `REQUIRE_PROXY_AUTH=true` requires a trusted gateway to inject one of
+the configured identity headers; setting it without that gateway will reject
+API calls. Use synthetic data while validating the deployment.
+
 This prototype has two deployment surfaces:
 
 1. a static browser frontend (`index.html`, JavaScript, and assets); and
@@ -51,11 +91,12 @@ INTRON_TTS_VOICE_GENDER=female
 
 Use a comma-separated list for multiple exact origins. Do not use `*` for
 production CORS when credentials or protected clinical workflows are involved.
-In Railway, add a PostgreSQL service and link its `DATABASE_URL` reference to
-the FastAPI service. The backend converts Railway's `postgresql://` URL to the
-asyncpg SQLAlchemy driver automatically. Keep the Cloudflare Pages frontend and
-its API-origin configuration unchanged. Set the Railway start command to
-`uvicorn main:app --host 0.0.0.0 --port $PORT` in the service settings.
+Configure `DATABASE_URL` to point to an external PostgreSQL database on the
+selected API host. The backend converts a `postgresql://` URL to the asyncpg
+SQLAlchemy driver automatically. For Hugging Face Spaces, see the Docker Space
+steps above. The Cloudflare Pages API origin must be changed from Railway to the
+Space URL. On Railway, the start command is
+`uvicorn main:app --host 0.0.0.0 --port $PORT`.
 Do not commit `.env` files, API keys, patient recordings, full transcripts, or
 provider response IDs.
 
