@@ -9,6 +9,7 @@ edge_sync.sqlite3
 benchmark_data/samples/*.m4a
 benchmark_data/samples/*.xlsx
 benchmark_data/wav/
+/benchmark_data/intron_fresh_run/
 
 # Local gated benchmark downloads and generated evaluation outputs
 clinical_validation/afriswitch/audio/

@@ -6,6 +6,11 @@ import argparse
 import csv
 from pathlib import Path
 from statistics import fmean
+from run_full_evaluation import (
+    benchmark_report_from_comparison,
+    evaluate_model_columns,
+    write_comparison_outputs,
+)
 
 try:
     import jiwer
@@ -294,6 +299,42 @@ async def run_benchmark():
     scoring_samples = unique_benchmark_samples(BENCHMARK_SAMPLES)
     models.extend(available_optional_models(scoring_samples))
     validate_benchmark_samples(scoring_samples, models)
+
+    manifest_path = Path(os.getenv("BENCHMARK_DATASET_DIR", "./benchmark_data")) / "manifest.csv"
+    if manifest_path.is_file():
+        rows = [
+            {
+                "case_id": sample["case_id"],
+                "reference": sample["reference"],
+                **sample["hypotheses"],
+            }
+            for sample in scoring_samples
+        ]
+        report = evaluate_model_columns(
+            rows,
+            "reference",
+            [(model, model) for model in models],
+        )
+        report["dataset"] = manifest_path.name
+        metadata_path = manifest_path.parent / "inference_metadata.json"
+        if metadata_path.is_file():
+            inference_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            report["inference_run_status"] = inference_metadata.get("run_status")
+            report["inference_generated_this_run"] = inference_metadata.get("generated_this_run", {})
+
+        write_comparison_outputs(
+            report,
+            summary_path=os.getenv("OUTPUT_EVALUATION_SUMMARY", "./evaluation_report_summary.json"),
+            benchmark_path=OUTPUT_REPORT_PATH,
+            markdown_path=OUTPUT_MARKDOWN_PATH,
+        )
+        print(json.dumps(benchmark_report_from_comparison(report), ensure_ascii=False, indent=2))
+        print(
+            "Scored cached manifest hypotheses only; audio inference was not run. "
+            f"Reports exported to {OUTPUT_REPORT_PATH}, {OUTPUT_MARKDOWN_PATH}, "
+            f"and {os.getenv('OUTPUT_EVALUATION_SUMMARY', './evaluation_report_summary.json')}."
+        )
+        return
 
     print("============================================================")
     print("Starting Multi-Model Speech Recognition Benchmark...")

@@ -2,11 +2,11 @@
 
 ## Deploy the FastAPI backend to Hugging Face Spaces
 
-This repository includes a Docker Space configuration (`Dockerfile` and the
-Docker SDK metadata at the top of `README.md`). Create a Docker Space in your
-Hugging Face account, then push or sync this repository to that Space. The
-container listens on port `7860`; the static browser frontend remains on
-Cloudflare Pages.
+This repository includes a Docker Space configuration (`Dockerfile` and Docker
+SDK metadata at the top of `README.md`). Create a Docker Space in your Hugging
+Face account, then push or sync this repository to that Space. The container
+serves the FastAPI application from `main.py` on port `7860`; the static browser
+frontend remains on Cloudflare Pages.
 
 Add runtime secrets/variables in the Space settings, not in the repository:
 

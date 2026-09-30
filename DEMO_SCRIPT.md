@@ -24,20 +24,26 @@ against the source audio and patient context.
 ## 1:05–1:35 — Clinical intake and follow-up
 
 Open Module 2 to show the editable clinical/EHR intake fields, then Module 3
-to show the post-care voice workflow. Do not claim that plain transcript input
-is automatically converted into a SOAP note; the clinical text API currently
-validates structured JSON and otherwise returns a manual-review fallback.
+to show the post-care voice workflow. In Module 2, use a simulated or approved,
+de-identified transcript and select “Generate SOAP draft.” This invokes the
+agent route when Gemini is configured; otherwise, it displays the manual-review
+fallback. Show the returned SOAP draft, ICD-10 candidates, optional TTS
+readback, and required clinician sign-off. Email and phone masking is limited
+and is not complete de-identification.
 
 ## 1:35–2:10 — Benchmark
 
-Open the benchmark matrix. Explain that the repository includes a reproducible
-three-sample fixture with embedded hypotheses for Intron Sahara v2.5, OpenAI
-Whisper Medium, and Meta Wav2Vec2 XLS-R. The fixture's FAAS is an aggregate
-composite score, not a demographic fairness evaluation.
+Open the benchmark matrix and identify its displayed values as a UI fixture,
+not independent model runs. The separate 15-case report scores cached
+manifest hypotheses for Intron Sahara v2.5, Whisper Tiny, English-only
+Wav2Vec2 Base, and Gemini; no new audio inference was run to generate those
+reports. Its FAAS is an aggregate composite, not a demographic fairness
+evaluation.
 
-Say: “These are fixture results, not a population-wide claim. A final
-submission should include the actual dataset version, sample count, model
-versions, consent status, and per-sample evidence.”
+Say: “These transcript scores are based on stored hypotheses and are not
+population-wide results or fresh audio inference. A final submission should
+include the audio, dataset version, model versions, consent status, and
+per-sample inference evidence.”
 
 ## 2:10–2:35 — Safety and deployment
 

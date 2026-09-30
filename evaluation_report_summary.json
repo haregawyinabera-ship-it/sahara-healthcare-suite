@@ -1,55 +1,668 @@
 {
-"challenge": "Sahara CodeSwitch Africa Challenge",
-"dataset": "Intron AfriHealth MultiBench v1.2",
-"evaluation_date": "2026-09-11",
-"models_evaluated": [
-{
-"model_id": "intron-sahara-v2.5",
-"name": "Intron Sahara v2.5 Clinical Engine",
-"is_primary": true,
-"metrics": {
-"nwer": 0.125,
-"cer": 0.068,
-"faas": 27.78,
-"bleu": 68.4,
-"chrf": 74.2
-},
-"code_switching_support": {
-"amharic_english": true,
-"oromoo_english": true
-}
-},
-{
-"model_id": "openai-whisper-medium",
-"name": "OpenAI Whisper Medium",
-"is_primary": false,
-"metrics": {
-"nwer": 0.342,
-"cer": 0.185,
-"faas": 14.20,
-"bleu": 41.2,
-"chrf": 52.8
-},
-"code_switching_support": {
-"amharic_english": false,
-"oromoo_english": false
-}
-},
-{
-"model_id": "meta-omnictc",
-"name": "Meta OmniCTC Pan-African ASR",
-"is_primary": false,
-"metrics": {
-"nwer": 0.289,
-"cer": 0.141,
-"faas": 18.55,
-"bleu": 49.6,
-"chrf": 58.1
-},
-"code_switching_support": {
-"amharic_english": false,
-"oromoo_english": false
-}
-}
-]
+  "evaluation_type": "language_aware_clinical_asr_comparison",
+  "cases_evaluated": 15,
+  "provenance": {
+    "source": "transcript hypotheses supplied in the input file",
+    "audio_inference_performed": false,
+    "note": "Scores evaluate cached transcript text; model inference was not run."
+  },
+  "models_evaluated": {
+    "Intron Sahara v2.5": {
+      "metrics": {
+        "overall_wer": 0.4174757281553398,
+        "english_wer": 0.36496350364963503,
+        "amharic_geez_cer": 0.24519230769230768,
+        "clinical_entity_recall": 0.8,
+        "faas_score": 2.8245875611752935,
+        "cases_evaluated": 15
+      },
+      "by_case": [
+        {
+          "standard_wer": 0.7,
+          "english_wer": 0.6666666666666666,
+          "amharic_geez_cer": 0.23529411764705882,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-01"
+        },
+        {
+          "standard_wer": 0.2,
+          "english_wer": 0.14285714285714285,
+          "amharic_geez_cer": 0.125,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-02"
+        },
+        {
+          "standard_wer": 0.5,
+          "english_wer": 0.5,
+          "amharic_geez_cer": 0.08333333333333333,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-03"
+        },
+        {
+          "standard_wer": 0.36363636363636365,
+          "english_wer": 0.125,
+          "amharic_geez_cer": 0.8333333333333334,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-05"
+        },
+        {
+          "standard_wer": 0.38461538461538464,
+          "english_wer": 0.5,
+          "amharic_geez_cer": 0.42105263157894735,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-06"
+        },
+        {
+          "standard_wer": 0.5,
+          "english_wer": 0.5,
+          "amharic_geez_cer": 0.2,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-07"
+        },
+        {
+          "standard_wer": 0.3125,
+          "english_wer": 0.18181818181818182,
+          "amharic_geez_cer": 0.21052631578947367,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-08"
+        },
+        {
+          "standard_wer": 0.7333333333333333,
+          "english_wer": 0.8,
+          "amharic_geez_cer": 0.6666666666666666,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-09"
+        },
+        {
+          "standard_wer": 0.4375,
+          "english_wer": 0.4166666666666667,
+          "amharic_geez_cer": 0.3333333333333333,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-10"
+        },
+        {
+          "standard_wer": 0.42105263157894735,
+          "english_wer": 0.5454545454545454,
+          "amharic_geez_cer": 0.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-11"
+        },
+        {
+          "standard_wer": 0.29411764705882354,
+          "english_wer": 0.16666666666666666,
+          "amharic_geez_cer": 0.15789473684210525,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-12"
+        },
+        {
+          "standard_wer": 0.15,
+          "english_wer": 0.11764705882352941,
+          "amharic_geez_cer": 0.42857142857142855,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-13"
+        },
+        {
+          "standard_wer": 0.6,
+          "english_wer": 0.625,
+          "amharic_geez_cer": 0.16666666666666666,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-14"
+        },
+        {
+          "standard_wer": 0.42857142857142855,
+          "english_wer": 0.2727272727272727,
+          "amharic_geez_cer": 0.4444444444444444,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-15"
+        },
+        {
+          "standard_wer": 0.45454545454545453,
+          "english_wer": 0.42857142857142855,
+          "amharic_geez_cer": 0.2857142857142857,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-04"
+        }
+      ]
+    },
+    "OpenAI Whisper Tiny": {
+      "metrics": {
+        "overall_wer": 0.9563106796116505,
+        "english_wer": 1.4306569343065694,
+        "amharic_geez_cer": 1.0,
+        "clinical_entity_recall": 0.6,
+        "faas_score": -2.024477554087959,
+        "cases_evaluated": 15
+      },
+      "by_case": [
+        {
+          "standard_wer": 1.0,
+          "english_wer": 4.0,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-01"
+        },
+        {
+          "standard_wer": 1.1,
+          "english_wer": 1.4285714285714286,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-02"
+        },
+        {
+          "standard_wer": 2.375,
+          "english_wer": 9.5,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-03"
+        },
+        {
+          "standard_wer": 0.8181818181818182,
+          "english_wer": 1.125,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-05"
+        },
+        {
+          "standard_wer": 1.2307692307692308,
+          "english_wer": 2.375,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-06"
+        },
+        {
+          "standard_wer": 0.625,
+          "english_wer": 1.0,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-07"
+        },
+        {
+          "standard_wer": 1.125,
+          "english_wer": 1.5454545454545454,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-08"
+        },
+        {
+          "standard_wer": 0.5333333333333333,
+          "english_wer": 0.8,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-09"
+        },
+        {
+          "standard_wer": 0.9375,
+          "english_wer": 1.25,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-10"
+        },
+        {
+          "standard_wer": 0.8947368421052632,
+          "english_wer": 1.2727272727272727,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-11"
+        },
+        {
+          "standard_wer": 0.8235294117647058,
+          "english_wer": 1.0833333333333333,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-12"
+        },
+        {
+          "standard_wer": 0.6,
+          "english_wer": 0.7058823529411765,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-13"
+        },
+        {
+          "standard_wer": 1.0,
+          "english_wer": 1.25,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-14"
+        },
+        {
+          "standard_wer": 1.2142857142857142,
+          "english_wer": 1.5454545454545454,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-15"
+        },
+        {
+          "standard_wer": 1.0,
+          "english_wer": 1.5714285714285714,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-04"
+        }
+      ]
+    },
+    "Meta Wav2Vec2 Base 960h (English)": {
+      "metrics": {
+        "overall_wer": 1.1359223300970873,
+        "english_wer": 1.6058394160583942,
+        "amharic_geez_cer": 1.0,
+        "clinical_entity_recall": 0.4666666666666667,
+        "faas_score": -3.8634185608241385,
+        "cases_evaluated": 15
+      },
+      "by_case": [
+        {
+          "standard_wer": 1.0,
+          "english_wer": 2.3333333333333335,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-01"
+        },
+        {
+          "standard_wer": 1.5,
+          "english_wer": 2.142857142857143,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-02"
+        },
+        {
+          "standard_wer": 0.875,
+          "english_wer": 2.5,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-03"
+        },
+        {
+          "standard_wer": 1.6363636363636365,
+          "english_wer": 2.25,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-05"
+        },
+        {
+          "standard_wer": 1.5384615384615385,
+          "english_wer": 2.5,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-06"
+        },
+        {
+          "standard_wer": 1.5,
+          "english_wer": 2.4,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-07"
+        },
+        {
+          "standard_wer": 0.8125,
+          "english_wer": 1.0909090909090908,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-08"
+        },
+        {
+          "standard_wer": 0.9333333333333333,
+          "english_wer": 1.3,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-09"
+        },
+        {
+          "standard_wer": 1.625,
+          "english_wer": 2.1666666666666665,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-10"
+        },
+        {
+          "standard_wer": 1.0526315789473684,
+          "english_wer": 1.8181818181818181,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-11"
+        },
+        {
+          "standard_wer": 1.0,
+          "english_wer": 1.0833333333333333,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-12"
+        },
+        {
+          "standard_wer": 0.7,
+          "english_wer": 0.7647058823529411,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-13"
+        },
+        {
+          "standard_wer": 1.1,
+          "english_wer": 1.375,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-14"
+        },
+        {
+          "standard_wer": 1.0,
+          "english_wer": 1.0909090909090908,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 0.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-15"
+        },
+        {
+          "standard_wer": 1.0,
+          "english_wer": 1.5714285714285714,
+          "amharic_geez_cer": 1.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-04"
+        }
+      ]
+    },
+    "Google Gemini gemini-flash-latest": {
+      "metrics": {
+        "overall_wer": 0.21359223300970873,
+        "english_wer": 0.11678832116788321,
+        "amharic_geez_cer": 0.1346153846153846,
+        "clinical_entity_recall": 1.0,
+        "faas_score": 6.704145438829659,
+        "cases_evaluated": 15
+      },
+      "by_case": [
+        {
+          "standard_wer": 0.5,
+          "english_wer": 0.6666666666666666,
+          "amharic_geez_cer": 0.23529411764705882,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-01"
+        },
+        {
+          "standard_wer": 0.3,
+          "english_wer": 0.14285714285714285,
+          "amharic_geez_cer": 0.125,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-02"
+        },
+        {
+          "standard_wer": 0.125,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.041666666666666664,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-03"
+        },
+        {
+          "standard_wer": 1.0909090909090908,
+          "english_wer": 0.375,
+          "amharic_geez_cer": 1.1666666666666667,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-05"
+        },
+        {
+          "standard_wer": 0.15384615384615385,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-06"
+        },
+        {
+          "standard_wer": 0.375,
+          "english_wer": 0.4,
+          "amharic_geez_cer": 0.13333333333333333,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-07"
+        },
+        {
+          "standard_wer": 0.0625,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.05263157894736842,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-08"
+        },
+        {
+          "standard_wer": 0.2,
+          "english_wer": 0.2,
+          "amharic_geez_cer": 0.16666666666666666,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-09"
+        },
+        {
+          "standard_wer": 0.0,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-10"
+        },
+        {
+          "standard_wer": 0.15789473684210525,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.16666666666666666,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-11"
+        },
+        {
+          "standard_wer": 0.11764705882352941,
+          "english_wer": 0.08333333333333333,
+          "amharic_geez_cer": 0.05263157894736842,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-12"
+        },
+        {
+          "standard_wer": 0.05,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.14285714285714285,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-13"
+        },
+        {
+          "standard_wer": 0.1,
+          "english_wer": 0.125,
+          "amharic_geez_cer": 0.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-14"
+        },
+        {
+          "standard_wer": 0.0,
+          "english_wer": 0.0,
+          "amharic_geez_cer": 0.0,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-15"
+        },
+        {
+          "standard_wer": 0.36363636363636365,
+          "english_wer": 0.2857142857142857,
+          "amharic_geez_cer": 0.35714285714285715,
+          "clinical_entity_recall": 1.0,
+          "first_partial_latency_ms": null,
+          "first_partial_latency_sla_met": false,
+          "soap_generation_latency_ms": null,
+          "case_id": "CS-04"
+        }
+      ]
+    }
+  },
+  "dataset": "manifest.csv",
+  "inference_run_status": "partial",
+  "inference_generated_this_run": {
+    "intron": 0,
+    "whisper": 0,
+    "wav2vec": 0,
+    "openai": 0,
+    "gemini": 0
+  }
 }

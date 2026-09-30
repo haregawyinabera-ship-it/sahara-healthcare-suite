@@ -17,6 +17,80 @@ class BenchmarkMetricTests(unittest.TestCase):
         self.assertEqual(benchmark_suite.calculate_entity_recall("fever cough", "fever"), 0.5)
         self.assertEqual(run_full_evaluation.clinical_entity_recall("fever cough", "fever"), 0.5)
 
+    def test_multi_model_evaluator_scores_transcripts_without_audio(self):
+        rows = [{
+            "sample_id": "CS-01",
+            "reference": "fever cough",
+            "intron_hypothesis": "fever cough",
+            "whisper_hypothesis": "fever",
+        }]
+
+        report = run_full_evaluation.evaluate_model_columns(
+            rows,
+            "reference",
+            [
+                ("Intron", "intron_hypothesis"),
+                ("Whisper", "whisper_hypothesis"),
+            ],
+        )
+
+        self.assertEqual(report["cases_evaluated"], 1)
+        self.assertFalse(report["provenance"]["audio_inference_performed"])
+        self.assertEqual(report["models_evaluated"]["Intron"]["metrics"]["overall_wer"], 0.0)
+        self.assertEqual(report["models_evaluated"]["Whisper"]["metrics"]["overall_wer"], 0.5)
+        self.assertNotIn("transliteration_mer", report["models_evaluated"]["Whisper"]["metrics"])
+        self.assertNotIn("transliteration_mer", report["models_evaluated"]["Whisper"]["by_case"][0])
+
+    def test_overall_wer_is_pooled_by_reference_word_count(self):
+        rows = [
+            {"reference": "one two", "hypothesis": "one"},
+            {
+                "reference": "a b c d e f g h i j",
+                "hypothesis": "a b c d e f g h i j",
+            },
+        ]
+
+        report = run_full_evaluation.evaluate_model_columns(
+            rows,
+            "reference",
+            [("Test", "hypothesis")],
+        )
+
+        metrics = report["models_evaluated"]["Test"]["metrics"]
+        self.assertAlmostEqual(metrics["overall_wer"], 1 / 12)
+        self.assertAlmostEqual(metrics["english_wer"], 1 / 12)
+
+    def test_comparison_outputs_share_one_metric_source(self):
+        rows = [{
+            "case_id": "CS-01",
+            "reference": "fever cough",
+            "hypothesis": "fever",
+        }]
+        report = run_full_evaluation.evaluate_model_columns(
+            rows,
+            "reference",
+            [("Whisper", "hypothesis")],
+        )
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            summary_path = Path(output_dir) / "summary.json"
+            benchmark_path = Path(output_dir) / "benchmark.json"
+            markdown_path = Path(output_dir) / "results.md"
+            run_full_evaluation.write_comparison_outputs(
+                report,
+                summary_path=summary_path,
+                benchmark_path=benchmark_path,
+                markdown_path=markdown_path,
+            )
+            summary = __import__("json").loads(summary_path.read_text(encoding="utf-8"))
+            benchmark = __import__("json").loads(benchmark_path.read_text(encoding="utf-8"))
+            markdown = markdown_path.read_text(encoding="utf-8")
+
+        metric = summary["models_evaluated"]["Whisper"]["metrics"]
+        self.assertEqual(benchmark["Whisper"]["overall_wer"], round(metric["overall_wer"], 4))
+        self.assertEqual(benchmark["Whisper"]["faas_score"], round(metric["faas_score"], 2))
+        self.assertIn("no audio inference was performed", markdown)
+
     def test_active_benchmark_dataset_contains_more_than_four_samples(self):
         self.assertGreaterEqual(len(benchmark_suite.BENCHMARK_SAMPLES), 6)
 

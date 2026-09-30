@@ -1,22 +1,22 @@
 {
   "Intron Sahara v2.5": {
-    "mean_wer": 0.4782,
-    "clinical_entity_recall": 0.9,
-    "faas_score": 2.75
+    "overall_wer": 0.4175,
+    "clinical_entity_recall": 0.8,
+    "faas_score": 2.82
   },
   "OpenAI Whisper Tiny": {
-    "mean_wer": 1.0641,
-    "clinical_entity_recall": 0.6333,
-    "faas_score": -2.25
+    "overall_wer": 0.9563,
+    "clinical_entity_recall": 0.6,
+    "faas_score": -2.02
   },
   "Meta Wav2Vec2 Base 960h (English)": {
-    "mean_wer": 1.1877,
+    "overall_wer": 1.1359,
     "clinical_entity_recall": 0.4667,
-    "faas_score": -4.06
+    "faas_score": -3.86
   },
   "Google Gemini gemini-flash-latest": {
-    "mean_wer": 0.292,
-    "clinical_entity_recall": 0.9667,
-    "faas_score": 5.2
+    "overall_wer": 0.2136,
+    "clinical_entity_recall": 1.0,
+    "faas_score": 6.7
   }
 }

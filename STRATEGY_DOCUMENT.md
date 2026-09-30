@@ -3,8 +3,9 @@
 ## Executive summary
 
 AfriHealth AI is a clinician-reviewed voice documentation and decision-support
-workflow for community health teams working across English, Amharic-English,
-and Afaan Oromoo-English conversations. The product is designed to reduce
+workflow for community health teams working with English-Amharic code-switched
+conversations. Other language pairs, including Afaan Oromoo, remain future
+work and are not established as supported. The product is designed to reduce
 documentation burden while keeping clinical decisions with qualified people.
 
 ## Product scope

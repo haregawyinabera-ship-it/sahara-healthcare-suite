@@ -3,9 +3,7 @@ title: Sahara Healthcare Suite API
 emoji: 🏥
 colorFrom: green
 colorTo: blue
-sdk: gradio
-sdk_version: 5.1.0
-app_file: app.py
+sdk: docker
 pinned: false
 license: mit
 ---

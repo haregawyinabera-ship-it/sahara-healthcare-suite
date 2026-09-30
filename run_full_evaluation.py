@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """Multi-dimensional clinical ASR evaluation for code-switched speech.
 
-This script evaluates ASR transcripts using a more faithful set of metrics than
-standard WER for mixed-script clinical conversations. It reports:
+This script evaluates ASR transcripts using language-aware metrics for
+mixed-script clinical conversations. It reports:
 
-- overall WER
+- pooled overall WER
 - English-only WER
 - Amharic/Ge'ez CER
-- code-switch transliteration MER
 - clinical entity extraction accuracy
 
-The metric split is important because plain WER treats Ethiopic and transliterated
-Latin tokens as substitutions or insertions even when the spoken meaning is the
-same (for example, "ሆድ" vs "HOD").
+WER, English WER, and CER are pooled over their respective reference tokens or
+characters. The English-token metric does not assess cross-script transliteration.
 """
 
 from __future__ import annotations
@@ -71,19 +69,27 @@ def levenshtein_distance(a: str, b: str) -> int:
 def word_wer(reference: str, hypothesis: str) -> float:
     ref_tokens = normalize_text(reference).split()
     hyp_tokens = normalize_text(hypothesis).split()
-    if not ref_tokens:
-        return 0.0 if not hyp_tokens else 1.0
+    return word_error_rate(ref_tokens, hyp_tokens)
 
-    rows = list(range(len(hyp_tokens) + 1))
-    for ref_index, ref_token in enumerate(ref_tokens, start=1):
+
+def edit_distance(reference: list[str], hypothesis: list[str]) -> int:
+    rows = list(range(len(hypothesis) + 1))
+    for ref_index, ref_token in enumerate(reference, start=1):
         next_row = [ref_index]
-        for hyp_index, hyp_token in enumerate(hyp_tokens, start=1):
+        for hyp_index, hyp_token in enumerate(hypothesis, start=1):
             insertion = next_row[hyp_index - 1] + 1
             deletion = rows[hyp_index] + 1
             substitution = rows[hyp_index - 1] + (ref_token != hyp_token)
             next_row.append(min(insertion, deletion, substitution))
         rows = next_row
-    return rows[-1] / max(1, len(ref_tokens))
+    return rows[-1]
+
+
+def word_error_rate(reference: list[str], hypothesis: list[str]) -> float:
+    errors = edit_distance(reference, hypothesis)
+    if not reference:
+        return 0.0 if not hypothesis else 1.0
+    return errors / len(reference)
 
 
 def char_cer(reference: str, hypothesis: str) -> float:
@@ -92,32 +98,6 @@ def char_cer(reference: str, hypothesis: str) -> float:
     if not ref:
         return 0.0 if not hyp else 1.0
     return levenshtein_distance(ref, hyp) / max(1, len(ref))
-
-
-def mixed_error_rate(reference: str, hypothesis: str) -> float:
-    """Compute MER on transliterated / code-switched Latin terms.
-
-    A transliteration span is defined as a sequence of alphabetic tokens in a
-    script-mixed sentence. This is deliberately separate from English-only WER so
-    that code-switched terms like 'HOD' and 'ሆድ' do not get scored as full-word
-    replacements when the phonetic meaning is the same.
-    """
-
-    ref_tokens = [token.lower() for token in LATIN_WORD_RE.findall(normalize_text(reference))]
-    hyp_tokens = [token.lower() for token in LATIN_WORD_RE.findall(normalize_text(hypothesis))]
-    if not ref_tokens:
-        return 0.0 if not hyp_tokens else 1.0
-
-    rows = list(range(len(hyp_tokens) + 1))
-    for ref_index, ref_token in enumerate(ref_tokens, start=1):
-        next_row = [ref_index]
-        for hyp_index, hyp_token in enumerate(hyp_tokens, start=1):
-            insertion = next_row[hyp_index - 1] + 1
-            deletion = rows[hyp_index] + 1
-            substitution = rows[hyp_index - 1] + (ref_token != hyp_token)
-            next_row.append(min(insertion, deletion, substitution))
-        rows = next_row
-    return rows[-1] / max(1, len(ref_tokens))
 
 
 def clinical_entity_recall(reference: str, hypothesis: str) -> float:
@@ -180,8 +160,6 @@ def evaluate_case(reference: str, hypothesis: str, *, first_frame_sent_ms: float
     ethiopic_hyp = tokenize_ethiopic(hypothesis)
     ethiopic_cer = char_cer(ethiopic_ref, ethiopic_hyp)
 
-    translit_mer = mixed_error_rate(reference, hypothesis)
-
     first_partial_latency_ms = None
     if first_frame_sent_ms is not None and first_partial_token_ms is not None:
         first_partial_latency_ms = calculate_first_partial_latency_ms(first_frame_sent_ms, first_partial_token_ms)
@@ -194,7 +172,6 @@ def evaluate_case(reference: str, hypothesis: str, *, first_frame_sent_ms: float
         "standard_wer": word_wer(reference, hypothesis),
         "english_wer": english_wer,
         "amharic_geez_cer": ethiopic_cer,
-        "transliteration_mer": translit_mer,
         "clinical_entity_recall": clinical_entity_recall(reference, hypothesis),
         "first_partial_latency_ms": first_partial_latency_ms,
         "first_partial_latency_sla_met": first_partial_latency_sla_met(first_partial_latency_ms),
@@ -234,23 +211,167 @@ def extract_reference_and_hypothesis(row: dict[str, object], ref_column: str, hy
     return ref, hyp
 
 
-def summarize(results: Iterable[dict]) -> dict:
+def summarize(
+    results: Iterable[dict],
+    reference_hypothesis_pairs: Iterable[tuple[str, str]],
+) -> dict:
     scores = list(results)
     if not scores:
         raise ValueError("No evaluation rows were supplied.")
 
+    pairs = list(reference_hypothesis_pairs)
+    if len(pairs) != len(scores):
+        raise ValueError("Each evaluation result must have a matching reference/hypothesis pair.")
+
     def mean(key: str) -> float:
         return sum(item[key] for item in scores) / len(scores)
 
+    overall_wer_errors = 0
+    overall_reference_words = 0
+    english_wer_errors = 0
+    english_reference_words = 0
+    geez_cer_errors = 0
+    geez_reference_chars = 0
+    for reference, hypothesis in pairs:
+        ref_words = normalize_text(reference).split()
+        hyp_words = normalize_text(hypothesis).split()
+        overall_wer_errors += edit_distance(ref_words, hyp_words)
+        overall_reference_words += len(ref_words)
+
+        ref_english = tokenize_english(reference)
+        hyp_english = tokenize_english(hypothesis)
+        english_wer_errors += edit_distance(ref_english, hyp_english)
+        english_reference_words += len(ref_english)
+
+        ref_geez = list(tokenize_ethiopic(reference))
+        hyp_geez = list(tokenize_ethiopic(hypothesis))
+        geez_cer_errors += edit_distance(ref_geez, hyp_geez)
+        geez_reference_chars += len(ref_geez)
+
+    def pooled_rate(errors: int, reference_units: int) -> float:
+        return errors / reference_units if reference_units else float(errors > 0)
+
     return {
         "cases_evaluated": len(scores),
-        "overall_wer": mean("standard_wer"),
-        "english_wer": mean("english_wer"),
-        "amharic_geez_cer": mean("amharic_geez_cer"),
-        "transliteration_mer": mean("transliteration_mer"),
+        "overall_wer": pooled_rate(overall_wer_errors, overall_reference_words),
+        "english_wer": pooled_rate(english_wer_errors, english_reference_words),
+        "amharic_geez_cer": pooled_rate(geez_cer_errors, geez_reference_chars),
         "clinical_entity_recall": mean("clinical_entity_recall"),
         "by_case": scores,
     }
+
+
+def calculate_faas(entity_recall: float, wer: float) -> float:
+    """Return the project composite; this is not a demographic fairness metric."""
+    return 10.0 * math.log10(max(entity_recall, 0.001) / max(wer, 0.0001))
+
+
+def evaluate_model_columns(
+    rows: list[dict[str, object]],
+    reference_column: str,
+    model_columns: list[tuple[str, str]],
+) -> dict:
+    """Score cached transcript columns without opening or requiring audio files."""
+    if not rows:
+        raise ValueError("No evaluation rows were supplied.")
+    if not model_columns:
+        raise ValueError("At least one model transcript column is required.")
+
+    models = {}
+    for model_name, hypothesis_column in model_columns:
+        evaluated = []
+        reference_hypothesis_pairs = []
+        for index, row in enumerate(rows, start=1):
+            reference, hypothesis = extract_reference_and_hypothesis(
+                row, reference_column, hypothesis_column
+            )
+            case = evaluate_case(reference, hypothesis)
+            case["case_id"] = str(row.get("case_id") or row.get("sample_id") or f"case_{index}")
+            evaluated.append(case)
+            reference_hypothesis_pairs.append((reference, hypothesis))
+
+        summary = summarize(evaluated, reference_hypothesis_pairs)
+        models[model_name] = {
+            "metrics": {
+                "overall_wer": summary["overall_wer"],
+                "english_wer": summary["english_wer"],
+                "amharic_geez_cer": summary["amharic_geez_cer"],
+                "clinical_entity_recall": summary["clinical_entity_recall"],
+                "faas_score": calculate_faas(
+                    summary["clinical_entity_recall"], summary["overall_wer"]
+                ),
+                "cases_evaluated": summary["cases_evaluated"],
+            },
+            "by_case": evaluated,
+        }
+
+    return {
+        "evaluation_type": "language_aware_clinical_asr_comparison",
+        "cases_evaluated": len(rows),
+        "provenance": {
+            "source": "transcript hypotheses supplied in the input file",
+            "audio_inference_performed": False,
+            "note": "Scores evaluate cached transcript text; model inference was not run.",
+        },
+        "models_evaluated": models,
+    }
+
+
+def benchmark_report_from_comparison(report: dict) -> dict:
+    return {
+        name: {
+            "overall_wer": round(values["metrics"]["overall_wer"], 4),
+            "clinical_entity_recall": round(values["metrics"]["clinical_entity_recall"], 4),
+            "faas_score": round(values["metrics"]["faas_score"], 2),
+        }
+        for name, values in report["models_evaluated"].items()
+    }
+
+
+def benchmark_markdown_from_comparison(report: dict) -> str:
+    rows = []
+    for name, values in report["models_evaluated"].items():
+        metrics = values["metrics"]
+        rows.append(
+            f"| {name} | {metrics['overall_wer'] * 100:.2f}% | "
+            f"{metrics['clinical_entity_recall'] * 100:.2f}% | {metrics['faas_score']:.2f} |"
+        )
+    return "\n".join([
+        "# Clinical ASR Transcript Comparison",
+        "",
+        f"> **Evidence status:** {report['cases_evaluated']} cached transcript rows were scored; no audio inference was performed.",
+        "",
+        "| Model | Overall WER ↓ | Clinical Entity Recall ↑ | FAAS Composite |",
+        "| :--- | :---: | :---: | :---: |",
+        *rows,
+        "",
+        "FAAS is calculated as 10 * log10(entity recall / WER). It is an aggregate composite, not a demographic fairness measure.",
+        "Overall and English WER plus Amharic/Ge'ez CER are pooled over reference words or characters; per-case metrics are also included.",
+        "",
+    ])
+
+
+def write_comparison_outputs(
+    report: dict,
+    *,
+    summary_path: str | Path | None = None,
+    benchmark_path: str | Path | None = None,
+    markdown_path: str | Path | None = None,
+) -> None:
+    outputs = (
+        (summary_path, report),
+        (benchmark_path, benchmark_report_from_comparison(report)),
+        (markdown_path, benchmark_markdown_from_comparison(report)),
+    )
+    for path, content in outputs:
+        if path is None:
+            continue
+        output_path = Path(path).resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, str):
+            output_path.write_text(content, encoding="utf-8")
+        else:
+            output_path.write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -267,6 +388,15 @@ def main() -> None:
     parser.add_argument("--first-partial-column", default="first_partial_token_ms", help="Optional column containing the first partial-token receive time in ms.")
     parser.add_argument("--soap-complete-column", default="soap_complete_ms", help="Optional column containing SOAP generation completion time in ms.")
     parser.add_argument("--output", help="Optional JSON report output path.")
+    parser.add_argument(
+        "--model-column",
+        action="append",
+        default=[],
+        metavar="MODEL=COLUMN",
+        help="Compare one cached hypothesis column; may be repeated.",
+    )
+    parser.add_argument("--benchmark-report", help="Optional legacy-format comparison JSON output.")
+    parser.add_argument("--markdown-report", help="Optional comparison table output.")
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()
@@ -274,7 +404,31 @@ def main() -> None:
         raise FileNotFoundError(f"Evaluation input not found: {input_path}")
 
     rows = read_cases(input_path)
+    if args.model_column:
+        model_columns = []
+        for item in args.model_column:
+            if "=" not in item:
+                parser.error(f"Invalid --model-column {item!r}; expected MODEL=COLUMN")
+            model_name, column = item.split("=", 1)
+            if not model_name.strip() or not column.strip():
+                parser.error(f"Invalid --model-column {item!r}; expected non-empty MODEL=COLUMN")
+            model_columns.append((model_name.strip(), column.strip()))
+
+        report = evaluate_model_columns(rows, args.reference_column, model_columns)
+        report["dataset"] = input_path.name
+        print(json.dumps({
+            name: values["metrics"] for name, values in report["models_evaluated"].items()
+        }, ensure_ascii=False, indent=2))
+        write_comparison_outputs(
+            report,
+            summary_path=args.output,
+            benchmark_path=args.benchmark_report,
+            markdown_path=args.markdown_report,
+        )
+        return
+
     evaluated = []
+    reference_hypothesis_pairs = []
     for index, row in enumerate(rows, start=1):
         ref, hyp = extract_reference_and_hypothesis(row, args.reference_column, args.hypothesis_column)
         first_frame_ms = row.get(args.first_frame_column)
@@ -289,8 +443,9 @@ def main() -> None:
         )
         result["case_id"] = str(row.get("case_id") or f"case_{index}")
         evaluated.append(result)
+        reference_hypothesis_pairs.append((ref, hyp))
 
-    summary = summarize(evaluated)
+    summary = summarize(evaluated, reference_hypothesis_pairs)
     latency_values = [case.get("first_partial_latency_ms") for case in evaluated if case.get("first_partial_latency_ms") is not None]
     mean_first_partial_latency = sum(latency_values) / len(latency_values) if latency_values else None
     latency_sla_pass_rate = None
@@ -303,7 +458,6 @@ def main() -> None:
             "overall_wer": round(summary["overall_wer"], 4),
             "english_wer": round(summary["english_wer"], 4),
             "amharic_geez_cer": round(summary["amharic_geez_cer"], 4),
-            "transliteration_mer": round(summary["transliteration_mer"], 4),
             "clinical_entity_recall": round(summary["clinical_entity_recall"], 4),
             "mean_first_partial_latency_ms": round(mean_first_partial_latency, 2) if mean_first_partial_latency is not None else None,
             "first_partial_latency_sla_target_ms": 250,
